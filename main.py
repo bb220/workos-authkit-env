@@ -14,6 +14,8 @@ workos = WorkOSClient(
     client_id=os.getenv("WORKOS_CLIENT_ID"),
 )
 
+cookie_password = os.getenv("WORKOS_COOKIE_PASSWORD")
+
 
 @app.get("/")
 def main():
@@ -26,3 +28,27 @@ def login():
         provider="authkit", redirect_uri="http://localhost:8000/callback"
     )
     return RedirectResponse(authorize_url)
+
+@app.get("/callback")
+def callback(code: str):
+
+    try:
+        auth_response = workos.user_management.authenticate_with_code(
+            code=code,
+            session={"seal_session": True, "cookie_password": cookie_password},
+        )
+
+        response = RedirectResponse("/")
+        response.set_cookie(
+            "wos_session",
+            auth_response.session_cookie,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+
+        return response
+    
+    except Exception as e:
+        print ("Error authenticating with code: ", e)
+        return RedirectResponse("/login")

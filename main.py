@@ -116,6 +116,20 @@ def callback(code: str):
         print ("Error authenticating with code: ", e)
         return RedirectResponse("/login")
     
+@app.get("/logout")
+def logout(request: Request):
+    session = workos.user_management.load_sealed_session(
+        sealed_session=request.cookies.get("wos_session"),
+        cookie_password=cookie_password
+    )
+    url = session.get_logout_url()
+
+    # After log out success, user reditected to app's home page
+    response = RedirectResponse(url)
+    response.delete_cookie("wos_session")
+
+    return response
+    
 @app.get("/dashboard")
 @with_auth
 def dashboard(request: Request):

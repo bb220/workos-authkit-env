@@ -60,10 +60,10 @@ def with_auth(f):
             
     return decorated_function
 
-@app.get("/")
-def main(request: Request):
+def render_page_with_user_data(request: Request, html_filename: str) -> Response:
     user_data = ""
     sealed_session = request.cookies.get("wos_session")
+
     if sealed_session:
         try:
             session = workos.user_management.load_sealed_session(
@@ -77,11 +77,15 @@ def main(request: Request):
                 print("User authenticated: ", user_data)
         except Exception as e:
             print("Error loading sealed session: ", e)
-    
-    with open("index.html") as f:
+
+    with open(html_filename) as f:
         html = f.read()
     updated_html = html.replace("{{USER_DATA}}", user_data)
     return Response(content=updated_html, media_type="text/html")
+
+@app.get("/")
+def main(request: Request):
+    return render_page_with_user_data(request, "index.html")
 
 
 @app.get("/login")
@@ -133,23 +137,4 @@ def logout(request: Request):
 @app.get("/dashboard")
 @with_auth
 def dashboard(request: Request):
-    user_data = ""
-    sealed_session = request.cookies.get("wos_session")
-    if sealed_session:
-        try:
-            session = workos.user_management.load_sealed_session(
-                sealed_session=sealed_session,
-                cookie_password=cookie_password
-            )
-            auth_response = session.authenticate()
-            if auth_response.authenticated and auth_response.user:
-                user = auth_response.user
-                user_data = f"Welcome. {user.first_name or ''} {user.last_name or ''}! ({user.email})"
-                print("User authenticated: ", user_data)
-        except Exception as e:
-            print("Error loading sealed session: ", e)
-    
-    with open("dashboard.html") as f:
-        html = f.read()
-    updated_html = html.replace("{{USER_DATA}}", user_data)
-    return Response(content=updated_html, media_type="text/html")
+    return render_page_with_user_data(request, "dashboard.html")

@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, RedirectResponse
 from workos import WorkOSClient
 from dotenv import load_dotenv
@@ -18,8 +18,27 @@ cookie_password = os.getenv("WORKOS_COOKIE_PASSWORD")
 
 
 @app.get("/")
-def main():
-    return FileResponse("index.html", media_type="text/html")
+def main(request: Request):
+    user_data = ""
+    sealed_session = request.cookies.get("wos_session")
+    if sealed_session:
+        try:
+            session = workos.user_management.load_sealed_session(
+                sealed_session=sealed_session,
+                cookie_password=cookie_password
+            )
+            auth_response = session.authenticate()
+            if auth_response.authenticated and auth_response.user:
+                user = auth_response.user
+                user_data = f"Welcome. {user.first_name or ''} {user.last_name or ''}! ({user.email})"
+                print("User authenticated: ", user_data)
+        except Exception as e:
+            print("Error loading sealed session: ", e)
+    
+    with open("index.html") as f:
+        html = f.read()
+    updated_html = html.replace("{{USER_DATA}}", user_data)
+    return Response(content=updated_html, media_type="text/html")
 
 
 @app.get("/login")
@@ -39,11 +58,12 @@ def callback(code: str):
         )
 
         response = RedirectResponse("/")
+
         response.set_cookie(
             "wos_session",
-            auth_response.session_cookie,
-            httponly=True,
+            auth_response.sealed_session,
             secure=True,
+            httponly=True,
             samesite="lax",
         )
 

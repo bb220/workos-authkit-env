@@ -45,4 +45,4 @@ This is a single-file FastAPI application (`main.py`) demonstrating core AuthKit
 
 ---
 
-  └─ 🌐  [brandonbellero](https://www.brandonbellero.com/)
+ -- [brandonbellero](https://www.brandonbellero.com/)
